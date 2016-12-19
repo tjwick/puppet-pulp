@@ -12,6 +12,11 @@ class pulp::broker {
     } elsif $pulp::messaging_transport == 'rabbitmq' {
       include ::rabbitmq
     }
+
+    Service[$broker_service] -> Service['pulp_celerybeat']
+    Service[$broker_service] -> Service['pulp_workers']
+    Service[$broker_service] -> Service['pulp_resource_manager']
+    Service[$broker_service] -> Exec['migrate_pulp_db']
   } else {
     if $pulp::messaging_transport == 'qpid' {
       include ::qpid::tools
@@ -19,9 +24,4 @@ class pulp::broker {
       Class['qpid::tools'] -> Class['pulp::service']
     }
   }
-
-  Service[$broker_service] -> Service['pulp_celerybeat']
-  Service[$broker_service] -> Service['pulp_workers']
-  Service[$broker_service] -> Service['pulp_resource_manager']
-  Service[$broker_service] -> Exec['migrate_pulp_db']
 }
