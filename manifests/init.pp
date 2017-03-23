@@ -35,6 +35,9 @@
 # $messaging_client_cert::      Absolute path to PEM encoded file containing both the private key and
 #                               certificate Pulp should present to the broker to be authenticated by the broker.
 #
+# $messaging_version::          Determines the version of packages related to the 'messaging transport protocol'.
+#
+#
 # $broker_url::                 A URL to a broker that Celery can use to queue tasks:
 #                               qpid://<username>:<password>@<hostname>:<port>/
 #
@@ -203,12 +206,23 @@
 #
 # $proxy_password::             Proxy password for authentication
 #
+# $yum_max_speed::              The maximum download speed for a Pulp task, such as a sync. (e.g. "4 Kb" or 1Gb")
+#                               type:string
+#
 # $num_workers::                Number of Pulp workers to use
 #                               defaults to number of processors and maxs at 8
 #                               type:integer
 #
+# $enable_katello::             Boolean to enable pulp katello plugin. Defaults
+#                               to false
+#                               type:boolean
+#
 # $enable_crane::               Boolean to enable crane docker repository
 #                               type:boolean
+#
+# $max_tasks_per_child::        Number of tasks after which the worker is restarted
+#                               and the memory it allocated is returned to the system
+#                               type:integer
 #
 # $enable_rpm::                 Boolean to enable rpm plugin. Defaults
 #                               to true
@@ -281,6 +295,11 @@
 #                               Defaults to false
 #                               type:boolean
 # 
+# $enable_profiling::           Turns on cProfiling of tasks in Pulp
+#                               type:boolean
+#
+# $profiling_directory::        Directory to store task profiling data in
+#
 class pulp (
   $version                   = $pulp::params::version,
   $crane_debug               = $pulp::params::crane_debug,
@@ -330,6 +349,7 @@ class pulp (
   $messaging_topic_exchange  = $pulp::params::messaging_topic_exchange,
   $messaging_event_notifications_enabled = $pulp::params::messaging_event_notifications_enabled,
   $messaging_event_notification_url = $pulp::params::messaging_event_notification_url,
+  $messaging_version         = $pulp::params::messaging_version,
   $broker_url                = $pulp::params::broker_url,
   $broker_use_ssl            = $pulp::params::broker_use_ssl,
   $tasks_login_method        = $pulp::params::tasks_login_method,
@@ -353,8 +373,11 @@ class pulp (
   $proxy_port                = $pulp::params::proxy_port,
   $proxy_username            = $pulp::params::proxy_username,
   $proxy_password            = $pulp::params::proxy_password,
+  $yum_max_speed             = $pulp::params::yum_max_speed,
   $num_workers               = $pulp::params::num_workers,
+  $enable_katello            = $pulp::params::enable_katello,
   $enable_crane              = $pulp::params::enable_crane,
+  $max_tasks_per_child       = $pulp::params::max_tasks_per_child,
   $enable_docker             = $pulp::params::enable_docker,
   $enable_rpm                = $pulp::params::enable_rpm,
   $enable_puppet             = $pulp::params::enable_puppet,
@@ -377,7 +400,10 @@ class pulp (
   $puppet_wsgi_processes     = $pulp::params::puppet_wsgi_processes,
   $migrate_db_timeout        = $pulp::params::migrate_db_timeout,
   $show_conf_diff            = $pulp::params::show_conf_diff,
+  $enable_profiling          = $pulp::params::enable_profiling,
+  $profiling_directory       = $pulp::params::profiling_directory,
 ) inherits pulp::params {
+  validate_bool($enable_katello)
   validate_bool($enable_crane)
   validate_bool($enable_docker)
   validate_bool($enable_rpm)
@@ -400,6 +426,12 @@ class pulp (
   validate_array($disabled_authenticators)
   validate_hash($additional_wsgi_scripts)
   validate_integer($max_keep_alive)
+  validate_bool($enable_profiling)
+  validate_absolute_path($profiling_directory)
+
+  if $max_tasks_per_child {
+    validate_integer($max_tasks_per_child)
+  }
 
   if $https_cert {
     validate_absolute_path($https_cert)
@@ -413,6 +445,13 @@ class pulp (
   if $ssl_protocol != undef {
     validate_string($ssl_protocol)
   }
+
+if $yum_max_speed {
+  validate_string($yum_max_speed)
+  $real_yum_max_speed = to_bytes($yum_max_speed)
+} else {
+  $real_yum_max_speed = undef
+}
 
   include ::mongodb::client
   include ::pulp::apache

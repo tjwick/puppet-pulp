@@ -44,6 +44,7 @@ class pulp::params {
   $messaging_topic_exchange = 'amq.topic'
   $messaging_event_notifications_enabled = false
   $messaging_event_notification_url = undef
+  $messaging_version = 'present'
 
   $broker_url = "qpid:///guest@${::fqdn}:5672"
   $broker_use_ssl = false
@@ -63,6 +64,7 @@ class pulp::params {
   $crane_port = 5000
   $crane_data_dir = '/var/lib/pulp/published/docker/v2/app'
 
+  $enable_katello = false
   $enable_crane = false
   $enable_rpm = true
   $enable_docker = false
@@ -106,6 +108,9 @@ class pulp::params {
 
   $max_keep_alive = 10000
   $num_workers = min($::processorcount, 8)
+  $max_tasks_per_child = undef
+
+  $yum_max_speed = undef
 
   $puppet_wsgi_processes = 3
   $show_conf_diff = false
@@ -117,17 +122,6 @@ class pulp::params {
   $node_oauth_key = 'pulp'
   $node_oauth_secret = 'secret'
 
-  $osreleasemajor = regsubst($::operatingsystemrelease, '^(\d+)\..*$', '\1')
-
-  case $::osfamily {
-    'RedHat' : {
-      case $osreleasemajor {
-        '6'     : { $pulp_workers_template = 'upstart_pulp_workers' }
-        default : { $pulp_workers_template = 'systemd_pulp_workers' }
-      }
-    }
-    default  : {
-      fail("${::hostname}: This module does not support osfamily ${::operatingsystem}")
-    }
-  }
+  $enable_profiling = false
+  $profiling_directory = '/var/lib/pulp/c_profiles'
 }

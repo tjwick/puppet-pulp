@@ -24,4 +24,9 @@ class pulp::broker {
       Class['qpid::tools'] -> Class['pulp::service']
     }
   }
+
+  Service <| title == $broker_service |> -> Service['pulp_celerybeat']
+  Service <| title == $broker_service |> -> Service['pulp_workers']
+  Service <| title == $broker_service |> -> Service['pulp_resource_manager']
+  Service <| title == $broker_service |> -> Exec['migrate_pulp_db']
 }

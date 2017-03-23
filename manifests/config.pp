@@ -61,6 +61,17 @@ class pulp::config {
     }
   }
 
+  if $pulp::enable_ostree {
+    file { '/etc/pulp/server/plugins.conf.d/ostree_importer.json':
+      ensure    => file,
+      content   => template('pulp/ostree_importer.json.erb'),
+      owner     => 'root',
+      group     => 'root',
+      mode      => '0644',
+      show_diff => $pulp::show_conf_diff,
+    }
+  }
+
   if $pulp::enable_puppet {
     exec { 'selinux_pulp_manage_puppet':
       command => 'semanage boolean -m --on pulp_manage_puppet',
@@ -80,10 +91,16 @@ class pulp::config {
 
   file { '/etc/default/pulp_workers':
     ensure  => file,
-    content => template("pulp/${pulp::pulp_workers_template}"),
+    content => template('pulp/systemd_pulp_workers'),
     owner   => 'root',
     group   => 'root',
     mode    => '0644',
+  }
+
+  file { $::pulp::rsa_key:
+    owner => 'root',
+    group => 'apache',
+    mode  => '0640',
   }
 
   if $pulp::reset_cache {
@@ -130,6 +147,15 @@ class pulp::config {
         range_offset_limit  => 'none',
         minimum_object_size => '0 kB',
       },
+    }
+  }
+
+  if $pulp::enable_profiling {
+    file { $pulp::profiling_directory:
+      ensure => directory,
+      owner  => 'apache',
+      group  => 'apache',
+      mode   => '0755',
     }
   }
 }
